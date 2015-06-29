@@ -22,7 +22,7 @@
 (def truth
   (fun [t f] t))
 
-(def falsity
+(def falsehood
   (fun [t f] f))
 
 (defmacro delay [v]
@@ -31,7 +31,7 @@
 
 (def and
   (fun [b1 b2]
-    (af b1 b2 falsity)))
+    (af b1 b2 falsehood)))
 
 (def pair
   (fun [a b]
@@ -45,7 +45,7 @@
 (def null?
   (fn [p]
     (af p
-        (fun [a b] falsity)
+        (fun [a b] falsehood)
         truth)))
 
 (defmacro iff [b t f]
@@ -148,7 +148,7 @@
     (iff (null? n1)
       (null? n2)
       (iff (null? n2)
-        falsity
+        falsehood
         (af equals (dec n1) (dec n2))))))
 
 ;;; End new numbers
@@ -217,7 +217,7 @@
      ~@(for [e elements]
          `(do
             (def ~e (fun [~@elements] ~e))
-            (def ~(symbol (str (name e) \?)) (fn [t#] (af t# ~@(for [e2 elements] (if (= e e2) `truth `falsity)))))))))
+            (def ~(symbol (str (name e) \?)) (fn [t#] (af t# ~@(for [e2 elements] (if (= e e2) `truth `falsehood)))))))))
 
 (defenum lshift rshift plus minus lbrace rbrace read write)
 
