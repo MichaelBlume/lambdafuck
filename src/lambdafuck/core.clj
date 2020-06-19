@@ -400,20 +400,38 @@
                           \< lshift
                           \> rshift} s))))
 
-(defn drive-brainfuck [progstring input]
-  (let [instructions (parse-brainfuck-string progstring)
-        encoded-input (from-seq (lmap #(from-num (long %)) input))
-        encoded-output (af run-brainfuck instructions encoded-input)]
+(defn start-brainfuck-interpreter [progstring]
+  (let [instructions (parse-brainfuck-string progstring)]
+    (run-brainfuck instructions)))
+
+(defn drive-brainfuck-interpreter [interpreter input]
+  (let [encoded-input (from-seq (lmap #(from-num (long %)) input))
+        encoded-output (interpreter encoded-input)]
     (lmap #(char (to-num %)) (to-seq encoded-output))))
 
-(defn print-brainfuck [progstring input]
-  (doseq [c (drive-brainfuck progstring input)]
+(defn drive-brainfuck [progstring input]
+  (-> progstring
+      start-brainfuck-interpreter
+      (drive-brainfuck-interpreter input)))
+
+(defn print-brainfuck-interpreter [interpreter input]
+  (doseq [c (drive-brainfuck-interpreter interpreter input)]
     (print c)
     (flush)))
+
+(defn print-brainfuck [progstring input]
+  (-> progstring
+      start-brainfuck-interpreter
+      (print-brainfuck-interpreter input)))
 
 (defn get-input-seq []
   (lazy-seq
    (cons (.read (System/in)) (get-input-seq))))
 
+(defn interact-brainfuck-interpreter [interpreter]
+  (print-brainfuck-interpreter interpreter (get-input-seq)))
+
 (defn interact-brainfuck [progstring]
-  (print-brainfuck progstring (get-input-seq)))
+  (-> progstring
+      start-brainfuck-interpreter
+      interact-brainfuck-interpreter))
