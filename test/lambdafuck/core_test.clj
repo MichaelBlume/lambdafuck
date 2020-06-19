@@ -4,8 +4,7 @@
             [clojure.java.io :refer [resource]]))
 
 (deftest test-drive
-  (is (= "Primes up to: 2 3 5 \n"
-         (apply str
-                (drive-brainfuck
-                 (slurp (resource "PRIME.BF"))
-                 "6\n")))))
+  (is (= (seq "Primes up to: 2 3 5 \n")
+         (drive-brainfuck
+          (slurp (resource "PRIME.BF"))
+          "6\n"))))
