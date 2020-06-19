@@ -410,3 +410,10 @@
   (doseq [c (drive-brainfuck progstring input)]
     (print c)
     (flush)))
+
+(defn get-input-seq []
+  (lazy-seq
+   (cons (.read (System/in)) (get-input-seq))))
+
+(defn interact-brainfuck [progstring]
+  (print-brainfuck progstring (get-input-seq)))
