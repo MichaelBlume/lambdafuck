@@ -357,9 +357,11 @@
 ;; Interface
 
 (defn from-num [n]
-  (if (= n 0)
-    zero
-    (inc (from-num (- n 1)))))
+  (loop [n n
+         ret zero]
+    (if (= n 0)
+      ret
+      (recur (- n 1) (inc ret)))))
 
 (defn to-bool [b] (af b true false))
 
