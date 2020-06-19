@@ -340,14 +340,19 @@
          do-read
          do-write))))
 
-(defun construct-state [instructions inputs]
+(defun construct-state [instructions]
   (lett [assembled (assemble-instructions instructions)
          pairs (do-parse-state (af parse-state instructions null null zero))
          jump-table (af make-jump-table pairs assembled assembled zero)]
-        (af brainfuck-state jump-table assembled blank-tape inputs zero)))
+        (af brainfuck-state jump-table assembled blank-tape null zero)))
 
-(defun run-brainfuck [instructions inputs]
-  (run-brainfuck-state (af construct-state instructions inputs)))
+(defun insert-inputs [state inputs]
+  (af alter-inputs (fn [_] inputs) state))
+
+(defun run-brainfuck [instructions]
+  (lett [state (construct-state instructions)]
+        (fn [inputs]
+          (run-brainfuck-state (af insert-inputs state inputs)))))
 
 ;; Interface
 
