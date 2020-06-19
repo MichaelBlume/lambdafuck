@@ -32,17 +32,20 @@
   `(fn [x#]
      (~v x#)))
 
+(defmacro deff [n v]
+  `(def ~n ~v))
+
+(defmacro defun [n args body]
+  `(deff ~n (fun ~args ~body)))
+
 ;; Bools
 
-(def truth
-  (fun [t f] t))
+(defun truth [t f] t)
 
-(def falsehood
-  (fun [t f] f))
+(defun falsehood [t f] f)
 
-(def and
-  (fun [b1 b2]
-    (af b1 b2 falsehood)))
+(defun and [b1 b2]
+  (af b1 b2 falsehood))
 
 (defmacro iff [b t f]
   `((af
@@ -53,46 +56,41 @@
 
 ;; Recursion
 
-(defn Y [f]
+(defun Y [f]
   ((fn [x] (x x))
    (fn [x]
      (f (fn [y]
           ((x x) y))))))
 
-(defmacro defrec [name body]
-  `(def ~name
+(defmacro defrec [name binding body]
+  `(deff ~name
      (Y
-      (fn [~name]
-        ~body))))
+      (fun [~name ~@binding]
+           ~body))))
 
 ;; Lists
 
-(def pair
-  (fun [a b]
-    (fun [selector nil-val]
-      (af selector a b))))
-
-(def null
+(defun pair [a b]
   (fun [selector nil-val]
-    nil-val))
+       (af selector a b)))
 
-(def null?
-  (fn [p]
-    (af p
-        (fun [a b] falsehood)
-        truth)))
+(defun null [selector nil-val]
+  nil-val)
 
-(def car
-  (fn [p]
-    (af p
-        (fun [f r] f)
-        null)))
+(defun null? [p]
+  (af p
+      (fun [a b] falsehood)
+      truth))
 
-(def cdr
-  (fn [p]
-    (af p
-        (fun [f r] r)
-        null)))
+(defun car [p]
+  (af p
+      (fun [f r] f)
+      null))
+
+(defun cdr [p]
+  (af p
+      (fun [f r] r)
+      null))
 
 (defmacro if-seq [s fst rst body ncase]
   `(af ~s (fun [~fst ~rst] ~body) ~ncase))
@@ -100,89 +98,78 @@
 (defmacro when-seq [s fst rst body]
   `(if-seq ~s ~fst ~rst ~body null))
 
-(defrec mapp
-  (fun [f s]
-    (when-seq s
-      fst rst
-      (af pair (f fst) (af mapp f rst)))))
+(defrec mapp [f s]
+  ;; Strict
+  (when-seq s
+            fst rst
+            (af pair (f fst) (af mapp f rst))))
 
-(defrec repeat-forever
-  (fn [x]
-    (af pair x (delay (repeat-forever x)))))
+(defrec repeat-forever [x]
+  (af pair x (delay (repeat-forever x))))
 
 ;;; numbers
 
-(def zero null)
+(deff zero null)
 
-(def inc
-  (fn [n]
-    (af pair null n)))
+(defun inc [n]
+  (af pair null n))
 
-(def zero? null?)
+(deff zero? null?)
 
-(def dec cdr)
+(deff dec cdr)
 
-(defrec an*
-  (fun [n f]
-    (fn [x]
-      (iff (null? n)
-        x
-        (f ((af an* (dec n) f) x))))))
+(defrec an* [n f]
+  (fn [x]
+    (iff (null? n)
+         x
+         (f ((af an* (dec n) f) x)))))
 
 (defmacro an [n f]
   `(af an* ~n ~f))
 
-(defrec equals
-  (fun [n1 n2]
-    (iff (null? n1)
-      (null? n2)
-      (iff (null? n2)
-        falsehood
-        (af equals (dec n1) (dec n2))))))
+(defrec equals [n1 n2]
+  (iff (null? n1)
+       (null? n2)
+       (iff (null? n2)
+            falsehood
+            (af equals (dec n1) (dec n2)))))
 
-(def get-nth
-  (fun [n s]
-    (car ((an n cdr) s))))
+(defun get-nth [n s]
+  (car ((an n cdr) s)))
 
 ;; Tape
 
-(def tape
-  (fun [ls v rs]
-    (fn [reader]
-      (af reader ls v rs))))
+(defun tape [ls v rs]
+  (fn [reader]
+    (af reader ls v rs)))
 
-(def read-tape
-  (fn [t]
-    (t (fun [_ v _] v))))
+(defun read-tape [t]
+  (t (fun [_ v _] v)))
 
-(def apply-tape
-  (fun [f t]
-    (t (fun [ls v rs]
-         (af tape ls (f v) rs)))))
+(defun apply-tape [f t]
+  (t (fun [ls v rs]
+          (af tape ls (f v) rs))))
 
-(def write-tape
-  (fun [t v]
-    (af apply-tape (fn [_] v) t)))
+(defun write-tape [t v]
+  (af apply-tape (fn [_] v) t))
 
-(def left-tape
-  (fn [t]
-    (t (fun [ls v rs]
-         (when-seq ls
-           fst rst
-           (af tape rst fst (af pair v rs)))))))
+(defun left-tape [t]
+  (t (fun [ls v rs]
+          (when-seq ls
+                    fst rst
+                    (af tape rst fst (af pair v rs))))))
 
-(def right-tape
-  (fn [t]
-    (t (fun [ls v rs]
-         (when-seq rs
-           fst rst
-           (af tape (af pair v ls) fst rst))))))
+(defun right-tape [t]
+  (t (fun [ls v rs]
+          (when-seq rs
+                    fst rst
+                    (af tape (af pair v ls) fst rst)))))
 
-(def inc-tape (apply-tape inc))
+(deff inc-tape (apply-tape inc))
 
-(def dec-tape (apply-tape dec))
+(deff dec-tape (apply-tape dec))
 
-(def blank-tape (af tape (repeat-forever zero) zero (repeat-forever zero)))
+(deff blank-tape (af tape (repeat-forever zero) zero (repeat-forever zero)))
 
 ;; Types
 
@@ -190,29 +177,29 @@
   `(do
      ~@(for [e elements]
          `(do
-            (def ~e (fun [~@elements] ~e))
-            (def ~(symbol (str (name e) \?)) (fn [t#] (af t# ~@(for [e2 elements] (if (= e e2) `truth `falsehood)))))))))
+            (defun ~e [~@elements] ~e)
+            (defun ~(symbol (str (name e) \?)) [t#]
+              (af t# ~@(for [e2 elements]
+                         (if (= e e2) `truth `falsehood))))))))
 
 (defmacro deftuple [tname & elements]
   `(do
-     (def ~tname
-       (fun [~@elements]
-         (fn [reader#]
-           (af reader# ~@elements))))
+     (defun ~tname [~@elements]
+       (fn [reader#]
+         (af reader# ~@elements)))
      ~@(for [e elements]
          `(do
-            (def ~(symbol (str "get-" (name e)))
-              (fn [t#]
-                (t# (fun [~@elements] ~e))))
-            (def ~(symbol (str "alter-" (name e)))
+            (defun ~(symbol (str "get-" (name e))) [t#]
+              (t# (fun [~@elements] ~e)))
+            (deff ~(symbol (str "alter-" (name e)))
               ~(let [f (gensym)
                      t (gensym)
                      new-val (gensym)]
                  `(fun [~f ~t]
-                    (lett [~new-val  (~f (~(symbol (str "get-" (name e))) ~t))]
-                       (~t
-                         (fun [~@elements]
-                           (af ~tname ~@(for [e2 elements] (if (= e2 e) new-val e2)))))))))))))
+                       (lett [~new-val  (~f (~(symbol (str "get-" (name e))) ~t))]
+                             (~t
+                              (fun [~@elements]
+                                   (af ~tname ~@(for [e2 elements] (if (= e2 e) new-val e2)))))))))))))
 
 ;; Parsing
 
@@ -220,162 +207,147 @@
 
 (defenum lshift rshift plus minus lbrace rbrace read write)
 
-(def parse-stepper
-  (fn [state]
-    (->>
-      (iff (lbrace? (car (get-parse-instructions state)))
+(defun parse-stepper [state]
+  (->>
+   (iff (lbrace? (car (get-parse-instructions state)))
         (af alter-loop-stack (pair (get-parse-counter state)) state)
         (iff (rbrace? (car (get-parse-instructions state)))
-          (lett [popped-counter (car (get-loop-stack state))]
-            (->> state
-                 (af alter-loop-stack cdr)
-                 (af alter-pairs (pair (af pair (get-parse-counter state) popped-counter))))) state))
-      (af alter-parse-instructions cdr)
-      (af alter-parse-counter inc))))
+             (lett [popped-counter (car (get-loop-stack state))]
+                   (->> state
+                        (af alter-loop-stack cdr)
+                        (af alter-pairs (pair (af pair (get-parse-counter state) popped-counter))))) state))
+   (af alter-parse-instructions cdr)
+   (af alter-parse-counter inc)))
 
-(defrec do-parse-state
-  (fn [state]
-    (iff (null? (get-parse-instructions state))
-      (get-pairs state)
-      (do-parse-state
+(defrec do-parse-state [state]
+  (iff (null? (get-parse-instructions state))
+       (get-pairs state)
+       (do-parse-state
         (parse-stepper
-          state)))))
+         state))))
 
-(defrec look-in-pairs
-  (fun [n pairs]
-    (when-seq pairs
-      fpair rpairs
-      (when-seq fpair
-        na nb
-        (iff (af equals n na)
-          (af pair nb null)
-          (iff (af equals n nb)
-            (af pair na null)
-            (af look-in-pairs n rpairs)))))))
+(defrec look-in-pairs [n pairs]
+  (when-seq pairs
+            fpair rpairs
+            (when-seq fpair
+                      na nb
+                      (iff (af equals n na)
+                           (af pair nb null)
+                           (iff (af equals n nb)
+                                (af pair na null)
+                                (af look-in-pairs n rpairs))))))
 
-(defrec make-jump-table
-  (fun [pairs instructions remaining-instructions counter]
-    (when-seq remaining-instructions
-      _ _
-      (af
-        pair
-        (when-seq (af look-in-pairs counter pairs)
-          jump-to _
-          (af
-            pair
-            jump-to
-            ((an jump-to cdr) instructions)))
-        (af make-jump-table pairs instructions (cdr remaining-instructions) (inc counter))))))
+(defrec make-jump-table [pairs instructions remaining-instructions counter]
+  (when-seq remaining-instructions
+            _ _
+            (af
+             pair
+             (when-seq (af look-in-pairs counter pairs)
+                       jump-to _
+                       (af
+                        pair
+                        jump-to
+                        ((an jump-to cdr) instructions)))
+             (af make-jump-table pairs instructions (cdr remaining-instructions) (inc counter)))))
 
 ;; Instructions
 
 (deftuple brainfuck-state jump-table instructions tape inputs instruction-counter)
 
-(def id (fn [x] x))
+(defun id [x] x)
 
-(def no-print
+(defun no-print [state]
+  (af pair id state))
+
+(defun tape-action [tapefn]
   (fn [state]
-    (af pair id state)))
+    (no-print (af alter-tape tapefn state))))
 
-(def tape-action
-  (fn [tapefn]
-    (fn [state]
-      (no-print (af alter-tape tapefn state)))))
+(deff do-lshift (tape-action left-tape))
+(deff do-rshift (tape-action right-tape))
+(deff do-plus (tape-action inc-tape))
+(deff do-minus (tape-action dec-tape))
 
-(def do-lshift (tape-action left-tape))
-(def do-rshift (tape-action right-tape))
-(def do-plus (tape-action inc-tape))
-(def do-minus (tape-action dec-tape))
+(defun do-write [state]
+  (lett [v (read-tape (get-tape state))]
+        (do
+          #_(println "writing" (to-num v))
+          (af pair (fn [s] (af pair v s)) state))))
 
-(def do-write
-  (fn [state]
-    (lett [v (read-tape (get-tape state))]
-      (do
-        #_(println "writing" (to-num v))
-        (af pair (fn [s] (af pair v s)) state)))))
+(defun do-read [state]
+  (lett [v (car (get-inputs state))]
+        (no-print
+         (->> state
+              (af alter-inputs cdr)
+              (af alter-tape (fn [tape]
+                               (af write-tape tape v)))))))
 
-(def do-read
-  (fn [state]
-    (lett [v (car (get-inputs state))]
-      (no-print
+(defun do-jump [state]
+  (lett [counter (get-instruction-counter state)
+         jump-table (get-jump-table state)
+         jump-to (af get-nth counter jump-table)]
         (->> state
-          (af alter-inputs cdr)
-          (af alter-tape (fn [tape]
-                           (af write-tape tape v))))))))
+             (af alter-instructions (fn [_] (cdr jump-to)))
+             (af alter-instruction-counter (fn [_] (car jump-to))))))
 
-(def do-jump
-  (fn [state]
-    (lett [counter (get-instruction-counter state)
-           jump-table (get-jump-table state)
-           jump-to (af get-nth counter jump-table)]
-      (->> state
-           (af alter-instructions (fn [_] (cdr jump-to)))
-           (af alter-instruction-counter (fn [_] (car jump-to)))))))
-
-(def do-lbrace
-  (fn [state]
-    (no-print
-      (iff (zero? (read-tape (get-tape state)))
+(defun do-lbrace [state]
+  (no-print
+   (iff (zero? (read-tape (get-tape state)))
         (do-jump state)
-        state))))
+        state)))
 
-(def do-rbrace
-  (fn [state]
-    (no-print
-      (iff (zero? (read-tape (get-tape state)))
+(defun do-rbrace [state]
+  (no-print
+   (iff (zero? (read-tape (get-tape state)))
         state
-        (do-jump state)))))
+        (do-jump state))))
 
 ;; Running
 
-(def run-one
-  (fn [state]
-    (catch-errors
-      (when-seq (get-instructions state)
-        ins _
-        (when-seq (ins state)
-          pfun new-state
-          (af pair
-            pfun
-            (->>
-              new-state
-              (af alter-instructions cdr)
-              (af alter-instruction-counter inc))))))))
+(defun run-one [state]
+  (catch-errors
+   (when-seq (get-instructions state)
+             ins _
+             (when-seq (ins state)
+                       pfun new-state
+                       (af pair
+                           pfun
+                           (->>
+                            new-state
+                            (af alter-instructions cdr)
+                            (af alter-instruction-counter inc)))))))
 
-(defrec run-brainfuck-state
-  (fn [state]
-    (catch-errors
-      (when-seq (run-one state)
-        print-output new-state
-        (print-output
-          (delay
-            (run-brainfuck-state new-state)))))))
+(defrec run-brainfuck-state [state]
+  (catch-errors
+   (when-seq (run-one state)
+             print-output new-state
+             (print-output
+              (delay
+               (run-brainfuck-state new-state))))))
 
 ;; Brainfuck
 
-(def assemble-instructions
+(deff assemble-instructions
   (mapp
-    (fn [i]
-      (af i
-          do-lshift
-          do-rshift
-          do-plus
-          do-minus
-          do-lbrace
-          do-rbrace
-          do-read
-          do-write))))
+   (fn [i]
+     (af i
+         do-lshift
+         do-rshift
+         do-plus
+         do-minus
+         do-lbrace
+         do-rbrace
+         do-read
+         do-write))))
 
-(def construct-state
-  (fun [instructions inputs]
-    (lett [assembled (assemble-instructions instructions)
-           pairs (do-parse-state (af parse-state instructions null null zero))
-           jump-table (af make-jump-table pairs assembled assembled zero)]
-      (af brainfuck-state jump-table assembled blank-tape inputs zero))))
+(defun construct-state [instructions inputs]
+  (lett [assembled (assemble-instructions instructions)
+         pairs (do-parse-state (af parse-state instructions null null zero))
+         jump-table (af make-jump-table pairs assembled assembled zero)]
+        (af brainfuck-state jump-table assembled blank-tape inputs zero)))
 
-(def run-brainfuck
-  (fun [instructions inputs]
-    (run-brainfuck-state (af construct-state instructions inputs))))
+(defun run-brainfuck [instructions inputs]
+  (run-brainfuck-state (af construct-state instructions inputs)))
 
 ;; Interface
 
@@ -388,16 +360,16 @@
 
 (defn from-seq [s]
   (fun [selector nil-val]
-    (if (seq s)
-      (af selector (first s) (from-seq (rest s)))
-      nil-val)))
+       (if (seq s)
+         (af selector (first s) (from-seq (rest s)))
+         nil-val)))
 
 (defn to-seq [p]
   (lazy-seq
-    (af p
-        (fun [f r]
-          (cons f (to-seq r)))
-        nil)))
+   (af p
+       (fun [f r]
+            (cons f (to-seq r)))
+       nil)))
 
 (defn to-num [n]
   ((an n clojure.core/inc) 0))
@@ -406,20 +378,20 @@
 
 (defn lmap [f s]
   (lazy-seq
-    (catch-errors
-      (when (seq s)
-        (cons (f (first s)) (lmap f (rest s)))))))
+   (catch-errors
+    (when (seq s)
+      (cons (f (first s)) (lmap f (rest s)))))))
 
 (defn parse-brainfuck-string [s]
   (from-seq
-    (filter identity (map {\[ lbrace
-                           \] rbrace
-                           \+ plus
-                           \- minus
-                           \, read
-                           \. write
-                           \< lshift
-                           \> rshift} s))))
+   (filter identity (map {\[ lbrace
+                          \] rbrace
+                          \+ plus
+                          \- minus
+                          \, read
+                          \. write
+                          \< lshift
+                          \> rshift} s))))
 
 (defn drive-brainfuck [progstring input]
   (let [instructions (parse-brainfuck-string progstring)
