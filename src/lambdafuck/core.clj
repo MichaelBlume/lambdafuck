@@ -192,14 +192,11 @@
             (defun ~(symbol (str "get-" (name e))) [t#]
               (t# (fun [~@elements] ~e)))
             (deff ~(symbol (str "alter-" (name e)))
-              ~(let [f (gensym)
-                     t (gensym)
-                     new-val (gensym)]
-                 `(fun [~f ~t]
-                       (lett [~new-val  (~f (~(symbol (str "get-" (name e))) ~t))]
-                             (~t
-                              (fun [~@elements]
-                                   (af ~tname ~@(for [e2 elements] (if (= e2 e) new-val e2)))))))))))))
+              ~(let [f (gensym)]
+                 `(fun [~f t#]
+                       (t#
+                        (fun [~@elements]
+                             (af ~tname ~@(for [e2 elements] (if (= e2 e) `(~f ~e2) e2))))))))))))
 
 ;; Parsing
 
