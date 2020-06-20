@@ -104,8 +104,8 @@
             fst rst
             (af pair (f fst) (af mapp f rst))))
 
-(defrec repeat-forever [x]
-  (af pair x (delay (repeat-forever x))))
+(defun repeat-forever [x]
+  (Y (fn [s] (af pair x s))))
 
 ;;; numbers
 
