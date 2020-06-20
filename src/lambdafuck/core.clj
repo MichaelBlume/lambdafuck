@@ -183,20 +183,19 @@
                          (if (= e e2) `truth `falsehood))))))))
 
 (defmacro deftuple [tname & elements]
-  `(do
-     (defun ~tname [~@elements]
-       (fn [reader#]
-         (af reader# ~@elements)))
-     ~@(for [e elements]
-         `(do
-            (defun ~(symbol (str "get-" (name e))) [t#]
-              (t# (fun [~@elements] ~e)))
-            (deff ~(symbol (str "alter-" (name e)))
-              ~(let [f (gensym)]
-                 `(fun [~f t#]
-                       (t#
-                        (fun [~@elements]
-                             (af ~tname ~@(for [e2 elements] (if (= e2 e) `(~f ~e2) e2))))))))))))
+  (let [f (gensym)]
+    `(do
+       (defun ~tname [~@elements]
+         (fn [reader#]
+           (af reader# ~@elements)))
+       ~@(for [e elements]
+           `(do
+              (defun ~(symbol (str "get-" (name e))) [t#]
+                (t# (fun [~@elements] ~e)))
+              (defun ~(symbol (str "alter-" (name e))) [~f t#]
+                (t#
+                 (fun [~@elements]
+                      (af ~tname ~@(for [e2 elements] (if (= e2 e) `(~f ~e2) e2)))))))))))
 
 ;; Parsing
 
