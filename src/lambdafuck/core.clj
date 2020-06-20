@@ -242,7 +242,7 @@
 
 (defrec make-jump-table [pairs instructions remaining-instructions counter]
   (when-seq remaining-instructions
-            _ _
+            _ more-instructions
             (af
              pair
              (when-seq (af look-in-pairs counter pairs)
@@ -251,7 +251,7 @@
                         pair
                         jump-to
                         ((an jump-to cdr) instructions)))
-             (af make-jump-table pairs instructions (cdr remaining-instructions) (inc counter)))))
+             (af make-jump-table pairs instructions more-instructions (inc counter)))))
 
 ;; Instructions
 
