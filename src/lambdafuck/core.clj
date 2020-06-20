@@ -210,13 +210,15 @@
 
 (defun parse-stepper [state]
   (->>
-   (iff (lbrace? (car (get-parse-instructions state)))
-        (af alter-loop-stack (pair (get-parse-counter state)) state)
-        (iff (rbrace? (car (get-parse-instructions state)))
-             (lett [popped-counter (car (get-loop-stack state))]
-                   (->> state
-                        (af alter-loop-stack cdr)
-                        (af alter-pairs (pair (af pair (get-parse-counter state) popped-counter))))) state))
+   (lett [next-instruction (car (get-parse-instructions state))]
+         (iff (lbrace? next-instruction)
+              (af alter-loop-stack (pair (get-parse-counter state)) state)
+              (iff (rbrace? next-instruction)
+                   (lett [popped-counter (car (get-loop-stack state))]
+                         (->> state
+                              (af alter-loop-stack cdr)
+                              (af alter-pairs (pair (af pair (get-parse-counter state) popped-counter)))))
+                   state)))
    (af alter-parse-instructions cdr)
    (af alter-parse-counter inc)))
 
