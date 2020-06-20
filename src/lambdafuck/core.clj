@@ -375,10 +375,10 @@
 
 (defn to-seq [p]
   (lazy-seq
-   (af p
-       (fun [f r]
-            (cons f (to-seq r)))
-       nil)))
+   (if-seq p
+           f r
+           (cons f (to-seq r))
+           nil)))
 
 (defn to-num [n]
   ((an n clojure.core/inc) 0))
