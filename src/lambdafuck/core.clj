@@ -385,12 +385,6 @@
 
 ;; Brainfuck Interface
 
-(defn lmap [f s]
-  (lazy-seq
-   (catch-errors
-    (when (seq s)
-      (cons (f (first s)) (lmap f (rest s)))))))
-
 (defn parse-brainfuck-string [s]
   (from-seq
    (filter identity (map {\[ lbrace
@@ -407,9 +401,9 @@
     (run-brainfuck instructions)))
 
 (defn drive-brainfuck-interpreter [interpreter input]
-  (let [encoded-input (from-seq (lmap #(from-num (long %)) input))
+  (let [encoded-input (from-seq (map #(from-num (long %)) input))
         encoded-output (interpreter encoded-input)]
-    (lmap #(char (to-num %)) (to-seq encoded-output))))
+    (map #(char (to-num %)) (to-seq encoded-output))))
 
 (defn drive-brainfuck [progstring input]
   (-> progstring
