@@ -183,7 +183,8 @@
                          (if (= e e2) `truth `falsehood))))))))
 
 (defmacro deftuple [tname & elements]
-  (let [f (gensym)]
+  (let [f (gensym)
+        v (gensym)]
     `(do
        (defun ~tname [~@elements]
          (fn [reader#]
@@ -192,6 +193,10 @@
            `(do
               (defun ~(symbol (str "get-" (name e))) [t#]
                 (t# (fun [~@elements] ~e)))
+              (defun ~(symbol (str "set-" (name e))) [~v t#]
+                (t#
+                 (fun [~@elements]
+                      (af ~tname ~@(for [e2 elements] (if (= e2 e) v e2))))))
               (defun ~(symbol (str "alter-" (name e))) [~f t#]
                 (t#
                  (fun [~@elements]
@@ -342,13 +347,10 @@
          jump-table (af make-jump-table pairs assembled assembled zero)]
         (af brainfuck-state jump-table assembled blank-tape null zero)))
 
-(defun insert-inputs [state inputs]
-  (af alter-inputs (fn [_] inputs) state))
-
 (defun run-brainfuck [instructions]
   (lett [state (construct-state instructions)]
         (fn [inputs]
-          (run-brainfuck-state (af insert-inputs state inputs)))))
+          (run-brainfuck-state (af set-inputs inputs state)))))
 
 ;; Interface
 
