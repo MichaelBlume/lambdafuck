@@ -278,20 +278,22 @@
           (af pair (fn [s] (af pair v s)) state))))
 
 (defun do-read [state]
-  (lett [v (car (get-inputs state))]
-        (no-print
-         (->> state
-              (af alter-inputs cdr)
-              (af alter-tape (fn [tape]
-                               (af write-tape tape v)))))))
+  (when-seq (get-inputs state)
+            v more-inputs
+            (->> state
+                 (af set-inputs more-inputs)
+                 (af alter-tape (fn [tape]
+                                  (af write-tape tape v)))
+                 no-print)))
 
 (defun do-jump [state]
   (lett [counter (get-instruction-counter state)
-         jump-table (get-jump-table state)
-         jump-to (af get-nth counter jump-table)]
-        (->> state
-             (af alter-instructions (fn [_] (cdr jump-to)))
-             (af alter-instruction-counter (fn [_] (car jump-to))))))
+         jump-table (get-jump-table state)]
+        (when-seq (af get-nth counter jump-table)
+                  new-counter new-instructions
+                  (->> state
+                       (af set-instructions new-instructions)
+                       (af set-instruction-counter new-counter)))))
 
 (defun do-lbrace [state]
   (no-print
